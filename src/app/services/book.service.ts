@@ -1,52 +1,56 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Book } from '../common/book';
 import { BookCategory } from '../common/book-category';
-
+import { createRequestOption } from './reques-utils';
+type EntityResponseType = HttpResponse<Book>;
+type EntityArrayResponseType = HttpResponse<Book[]>;
 @Injectable({
   providedIn: 'root'
 })
 export class BookService {
 
-  private baseUrl = "http://localhost:8080/api/v1/books";
-  private categoryUrl = "http://localhost:8080/api/v1/book-category";
+  private rousourceUrl = "http://localhost:5000/book/";
 
-  constructor(private httpClient: HttpClient) { }
-
-  getBooks(theCategoryId: number): Observable<Book[]>{
-    const searchUrl = `${this.baseUrl}/search/categoryid?id=${theCategoryId}`;
-    return this.getBooksList(searchUrl);
+  constructor(protected http: HttpClient) {
   }
 
-  getBooksPaginate(theCategoryId: number, currentPage: number, pageSize: number): Observable<GetResponseBooks>{
-    const searchUrl = `${this.baseUrl}/search/categoryid?id=${theCategoryId}&page=${currentPage}&size=${pageSize}`;
-    return this.httpClient.get<GetResponseBooks>(searchUrl);
+  create(book: Book): Observable<EntityResponseType> {
+    return this.http.post<Book>(this.rousourceUrl + 'post', book, {observe: 'response'});
   }
 
-  getBookCategories(): Observable<BookCategory[]>{
-    return this.httpClient.get<GetResponseBookCategory>(this.categoryUrl).pipe(
-      map(response => response._embedded.bookCateogry)
-    );
+  searchBooks(key:string, req: any){
+    const opition = createRequestOption(req);
+    return this.http.get<Book[]>(this.rousourceUrl + 'search', {params: opition, headers: {key: key},observe: 'response'})
+  }
+  query(req: any): Observable<EntityArrayResponseType>
+  {
+    const opition = createRequestOption(req);
+    return this.http.get<Book[]>(this.rousourceUrl + 'get', {params: opition, observe: 'response'})
+  }
+  queryByCatalogue(id: number,req: any): Observable<EntityArrayResponseType>
+  {
+    const opition = createRequestOption(req);
+    return this.http.get<Book[]>(this.rousourceUrl + `catalogue/${id}`, {params: opition, observe: 'response'})
   }
 
-  searchBooks(keyword: string, currentPage: number, pageSize: number): Observable<GetResponseBooks>{
-    const searchUrl = `${this.baseUrl}/search/searchbykeyword?name=${keyword}&page=${currentPage}&size=${pageSize}`;
-    //return this.getBooksList(searchUrl);
-    return this.httpClient.get<GetResponseBooks>(searchUrl);
+  update(group: Book): Observable<EntityResponseType> {
+    return this.http.put<Book>(this.rousourceUrl + 'put', group, {observe: 'response'});
   }
 
-  private getBooksList(searchUrl: string): Observable<Book[]> {
-    return this.httpClient.get<GetResponseBooks>(searchUrl).pipe(
-      map(response => response._embedded.books)
-    );
+  find(id: number): Observable<EntityResponseType> {
+    return this.http.get<Book>(`${this.rousourceUrl}/get/${id}`, {observe: 'response'});
   }
 
-  get(bookId: number): Observable<Book> {
-    const bookDetailsUrl = `${this.baseUrl}/${bookId}`;
-    return this.httpClient.get<Book>(bookDetailsUrl);
+  delete(id: number): Observable<HttpResponse<{}>> {
+    return this.http.put(`${this.rousourceUrl}delete/${id}`, null,{observe: 'response'});
   }
+  getBookCategories(): Observable<any>{
+    return this.http.get('http://localhost:5000/catalogue/get', {observe: 'response'})
+  }
+
 }
 
 interface GetResponseBooks{

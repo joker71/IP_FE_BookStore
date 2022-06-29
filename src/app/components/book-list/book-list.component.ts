@@ -18,7 +18,7 @@ export class BookListComponent implements OnInit {
   currentCategoryId: number = 1;
   previousCategoryId: number = 1;
   searchMode: boolean = false;
-  
+
   //properties for client side paging
 
   //pageOfItems: Array<Book>;
@@ -30,15 +30,15 @@ export class BookListComponent implements OnInit {
   totalRecords: number = 0;
 
   constructor(private _bookService: BookService,
-              private _activatedRoute: ActivatedRoute,
-              private _cartService: CartService,
-              config: NgbPaginationConfig) {
-                config.boundaryLinks = true;
-                config.maxSize = 3;
-              }
+    private _activatedRoute: ActivatedRoute,
+    private _cartService: CartService,
+    config: NgbPaginationConfig) {
+    config.boundaryLinks = true;
+    config.maxSize = 3;
+  }
 
   ngOnInit() {
-    this._activatedRoute.paramMap.subscribe(()=>{
+    this._activatedRoute.paramMap.subscribe(() => {
       this.listBooks();
     })
   }
@@ -49,25 +49,28 @@ export class BookListComponent implements OnInit {
     this.pageOfItems = pageOfItems;
   } */
 
-  listBooks(){
+  listBooks() {
     this.searchMode = this._activatedRoute.snapshot.paramMap.has('keyword');
 
-    if(this.searchMode){
+    if (this.searchMode) {
       //do search work
       this.handleSearchBooks();
-    }else {
+    } else {
       //display books based on category
       this.handleListBooks();
     }
   }
 
-  handleListBooks(){
+  handleListBooks() {
     const hasCategoryId: boolean = this._activatedRoute.snapshot.paramMap.has('id');
-    
+
     if (hasCategoryId) {
       this.currentCategoryId = +this._activatedRoute.snapshot.paramMap.get('id');
-    }else {
-      this.currentCategoryId = 1;
+      this._bookService.queryByCatalogue(this.currentCategoryId, { page: this.currentPage - 1, size: this.pageSize })
+      .subscribe(this.processResult());
+    } else {
+      this._bookService.query({ page: this.currentPage - 1, size: this.pageSize })
+      .subscribe(this.processResult());
     }
 
     //setting up the page number to 1
@@ -78,21 +81,17 @@ export class BookListComponent implements OnInit {
 
     this.previousCategoryId = this.currentCategoryId;
 
-    console.log('current page size', this.currentPage-1);
-    
-    this._bookService.getBooksPaginate(this.currentCategoryId, 
-                                        this.currentPage - 1, 
-                                        this.pageSize)
-                                        .subscribe(this.processResult());
+
+    // this._bookService.queryByCatalogue(this.currentCategoryId, { page: this.currentPage - 1, size: this.pageSize })
+    //   .subscribe(this.processResult());
   }
 
-  handleSearchBooks(){
+  handleSearchBooks() {
     const keyword: string = this._activatedRoute.snapshot.paramMap.get('keyword');
 
     this._bookService.searchBooks(keyword,
-                                  this.currentPage - 1,
-                                  this.pageSize)
-                                  .subscribe(this.processResult());
+      { page: this.currentPage - 1, size: this.pageSize })
+      .subscribe(this.processResult());
   }
 
   //client side paging and server side paging
@@ -102,17 +101,19 @@ export class BookListComponent implements OnInit {
     this.listBooks();
   }
 
-  processResult(){
+  processResult() {
     return data => {
-      this.books = data._embedded.books;
-      this.currentPage = data.page.number + 1;
-      this.totalRecords = data.page.totalElements;
-      this.pageSize = data.page.size;
+      let res= data.body;
+      this.books = res.content;
+      console.log(res)
+      this.currentPage = res.pageable.pageNumber + 1;
+      this.totalRecords = res.pageable.pageNumber;
+      this.pageSize = res.totalElements;
     }
   }
 
-  addToCart(book: Book){
-    console.log(`book name: ${book.name}, and price: ${book.unitPrice}`);
+  addToCart(book: Book) {
+    console.log(`book name: ${book.title}, and price: ${book.price}`);
     const cartItem = new CartItem(book);
     this._cartService.addToCart(cartItem);
   }
